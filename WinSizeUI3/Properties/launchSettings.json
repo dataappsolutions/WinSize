@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WinSizeUI3 (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "WinSizeUI3 (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

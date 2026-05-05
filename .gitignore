@@ -366,3 +366,6 @@ FodyWeavers.xsd
 deploy-winsize.ps1
 publish-winsize.ps1
 publish-winui3.ps1
+
+# Claude Code worktrees
+.claude/

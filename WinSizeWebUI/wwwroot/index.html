@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>WinSize</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.4rem;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+            .row input {
+                flex: 1;
+                padding: 0.4rem;
+                font-size: 1rem;
+            }
+
+        .presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+        }
+
+            .presets button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.85rem;
+                cursor: pointer;
+            }
+
+        button.primary {
+            padding: 0.5rem 1.2rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>WinSize</h1>
+    <label for="windowList" style="display:block; font-weight:600; margin-bottom:0.35rem;">Open Windows</label>
+    <select id="windowList" size="1">
+        <option value="">Loading windows…</option>
+    </select>
+
+    <div style="margin-bottom:1rem;">
+        <label><input type="checkbox" id="centerWindow" />Center window on screen</label>
+    </div>
+
+    <div class="row">
+        <input id="width" type="number" placeholder="Width" min="1" />
+        <input id="height" type="number" placeholder="Height" min="1" />
+    </div>
+
+    <label for="presetSelect" style="display:block; font-weight:600; margin-bottom:0.35rem;">Preset Size</label>
+    <select id="presetSelect" onchange="applyPreset()" style="width:100%; padding:0.4rem; font-size:1rem; margin-bottom:1rem;">
+        <option value="">— select a preset —</option>
+        <option value="800,600">800 × 600 (SVGA)</option>
+        <option value="1024,768">1024 × 768 (XGA)</option>
+        <option value="1280,720">1280 × 720 (HD 720p)</option>
+        <option value="1440,900">1440 × 900 (16:10)</option>
+        <option value="1600,900">1600 × 900 (HD+ / 900p)</option>
+        <option value="1920,1080">1920 × 1080 (Full HD / 1080p)</option>
+        <option value="2560,1440">2560 × 1440 (QHD / 1440p)</option>
+        <option value="3840,2160">3840 × 2160 (4K UHD / 2160p)</option>
+    </select>
+
+    <div style="display:flex; gap:0.5rem;">
+        <button class="primary" onclick="resize()">Resize</button>
+        <button class="primary" onclick="loadWindows()">Refresh List</button>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        async function loadWindows() {
+            setStatus('Loading…');
+            const res = await fetch('/api/windows');
+            const list = await res.json();
+            //console.log('Windows response:', list);
+            const sel = document.getElementById('windowList');
+            //sel.innerHTML = list.length
+            //    ? list.map(w => `<option value="${w.handle}">[${esc(w.processName)}] ${esc(w.title)} (handle: ${w.handle})</option>`).join('')
+            //    : '<option value="">No windows found</option>';
+            sel.innerHTML = list.length
+                ? list.map(w => `<option value="${w.handle}">[${esc(w.processName)}] ${esc(w.title)}</option>`).join('')
+                : '<option value="">No windows found</option>';
+            setStatus('');
+        }
+
+        async function resize() {
+            const sel = document.getElementById('windowList');
+            const handle = parseInt(sel.value);
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            const center = document.getElementById('centerWindow').checked;
+            if (!sel.value) return setStatus('Select a window first.');
+            if (!width || !height) return setStatus('Enter width and height.');
+            const payload = JSON.stringify({ handle, width, height, center });
+            //console.log('Sending payload:', payload);
+            const res = await fetch('/api/resize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload
+            });
+            if (res.ok) {
+                setStatus(`Resized to ${width}×${height}.`);
+            } else {
+                const text = await res.text();
+                setStatus(`Failed (HTTP ${res.status}): ${text}`);
+            }
+        }
+
+        function setStatus(msg) { document.getElementById('status').textContent = msg; }
+        function esc(s) {
+            if (s == null) return '';
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function applyPreset() {
+            const val = document.getElementById('presetSelect').value;
+            if (!val) return;
+            const [w, h] = val.split(',').map(Number);
+            document.getElementById('width').value = w;
+            document.getElementById('height').value = h;
+        }
+
+        loadWindows();
+    </script>
+</body>
+</html>
